@@ -92,16 +92,19 @@ const BarcodeCreator = () => {
               return (
                 <div
                   key={bIdx}
-                  className="flex justify-center items-center border rounded-lg p-3 flex-col"
+                  className="flex justify-center items-center border rounded-lg p-3 flex-col gap-y-5"
                 >
-                  <QRCode value={JSON.stringify(barcode)} size={180} />
-                  {/* <Barcode
+                  <div className="flex flex-col items-center">
+                    <QRCode value={JSON.stringify(barcode)} size={120} />
+                    <span>{qr}</span>
+                  </div>
+                  <Barcode
                     value={bar}
                     width={1.3}
                     height={40}
-                    fontSize={10}
+                    fontSize={13}
                     textMargin={3}
-                  /> */}
+                  />
                 </div>
               );
             })}
