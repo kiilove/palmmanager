@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ContentTitle } from "../commonstyles/Title";
 import Barcode from "react-barcode";
-import { Button, Form, Input, QRCode, Result, Spin } from "antd";
+import { Button, Form, Input, QRCode, Result, Space, Spin } from "antd";
 import ReactToPrint, { useReactToPrint } from "react-to-print";
 
 const BarcodeCreator = () => {
@@ -73,7 +73,6 @@ const BarcodeCreator = () => {
       const { barcodeValue, barcodeCount } = location.state;
       formRef?.current.setFieldsValue({
         barcodeValue: barcodeValue,
-        barcodeCount: barcodeCount,
       });
     }
   }, [location]);
@@ -95,16 +94,9 @@ const BarcodeCreator = () => {
                   className="flex justify-center items-center border rounded-lg p-3 flex-col gap-y-5"
                 >
                   <div className="flex flex-col items-center">
-                    <QRCode value={JSON.stringify(barcode)} size={120} />
-                    <span>{qr}</span>
+                    <QRCode value={JSON.stringify(barcode)} size={125} />
+                    <span style={{ fontSize: "12px" }}>{qr}</span>
                   </div>
-                  <Barcode
-                    value={bar}
-                    width={1.3}
-                    height={40}
-                    fontSize={13}
-                    textMargin={3}
-                  />
                 </div>
               );
             })}
@@ -162,16 +154,18 @@ const BarcodeCreator = () => {
                     <Input defaultValue={location?.state?.barcodeValue} />
                   </Form.Item>
                   <Form.Item name="barcodeCount" label="인쇄숫자">
-                    <Input defaultValue={location?.state?.barcodeCount} />
+                    <Input placeholder={location?.state?.barcodeCount} />
                   </Form.Item>
-                  <Button
-                    type="primary"
-                    className="bg-blue-500"
-                    htmlType="submit"
-                  >
-                    생성
-                  </Button>{" "}
-                  <Button onClick={handlePrint}>전체출력</Button>
+                  <Space>
+                    <Button
+                      type="primary"
+                      className="bg-blue-500"
+                      htmlType="submit"
+                    >
+                      생성
+                    </Button>{" "}
+                    <Button onClick={handlePrint}>전체출력</Button>
+                  </Space>
                 </Form>
               </div>
             </div>
