@@ -10,36 +10,32 @@ import SowingList from "./pages/SowingList";
 import NewTransplanting from "./pages/NewTransplanting";
 import BlockList from "./pages/BlockList";
 import BarcodeCreator from "./pages/BarcodeCreator";
+import NewUser from "./pages/NewUser";
+import ListUser from "./pages/ListUser";
+import NewAsset from "./pages/NewAsset";
+import ListAsset from "./pages/ListAsset";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Main />} />
-        <Route path="/newsowing" element={<Main children={<NewSowing />} />} />
         <Route
-          path="/sowinglist"
-          element={<Main children={<SowingList />} />}
+          path="/eff179b5-a575-4046-99f3-ca0dc465af3e"
+          element={<Main children={<NewAsset />} />}
         />
         <Route
-          path="/newtransplanting"
-          element={<Main children={<NewTransplanting />} />}
-        />
-        <Route path="/blocklist" element={<Main children={<BlockList />} />} />
-        <Route
-          path="/barcodecreator"
-          element={<Main children={<BarcodeCreator />} />}
-        />
-
-        {/* <Route path="/test" element={<Main children={<AntdTest />} />} />
-        <Route
-          path="/customerlist"
-          element={<Main children={<CustomerList />} />}
+          path="/ed4599ce-5808-462c-b10f-3eee0df54dd1"
+          element={<Main children={<ListAsset />} />}
         />
         <Route
-          path="/customernew"
-          element={<Main children={<CustomerNew />} />}
-        /> */}
+          path="/0f55998a-7b77-426d-880d-3c6fd7ef4654"
+          element={<Main children={<NewUser />} />}
+        />
+        <Route
+          path="/a7e05d80-6fa2-452c-b3c7-f4177fad2534"
+          element={<Main children={<ListUser />} />}
+        />
       </Routes>
     </BrowserRouter>
   );

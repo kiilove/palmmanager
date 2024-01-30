@@ -22,7 +22,13 @@ const Main = ({ children }) => {
 
   return (
     <Layout>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        className=" bg-white"
+        theme="light"
+      >
         <MainSide />
       </Sider>
       <Layout>

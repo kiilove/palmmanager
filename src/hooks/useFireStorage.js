@@ -58,7 +58,7 @@ const resizeImage = async (file, maxSizeInBytes) => {
   });
 };
 
-const useImageUpload = (path) => {
+const useImageUpload = () => {
   const [uploadResult, setUploadResult] = useState({
     success: false,
     downloadUrl: null,
@@ -67,7 +67,13 @@ const useImageUpload = (path) => {
   });
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const uploadImage = async (file, filename, maxSizeInBytes = 500 * 1024) => {
+  const uploadImage = async (
+    path,
+    file,
+    filename,
+    isResize = true,
+    maxSizeInBytes = 500 * 1024
+  ) => {
     return new Promise(async (resolve, reject) => {
       let resizedFile = file;
 

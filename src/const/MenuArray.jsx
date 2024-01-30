@@ -8,7 +8,11 @@ export const sideMenuItems = [
     labelKey: "menuHead2",
     icon: <FaTreeCity />,
     children: [
-      { key: "2-1", labelKey: "menuHead2Sub1", link: "/newsowing" },
+      {
+        key: "2-1",
+        labelKey: "menuHead2Sub1",
+        link: "/eff179b5-a575-4046-99f3-ca0dc465af3e",
+      },
       { key: "2-2", labelKey: "menuHead2Sub2", link: "/sowinglist" },
       { key: "2-3", labelKey: "menuHead2Sub3", link: "/blocklist" },
     ],
