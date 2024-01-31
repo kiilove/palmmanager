@@ -3,17 +3,11 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./i18n";
 import Main from "./pages/Main";
 
-import IncomeTree from "./pages/IncomeTree";
-import NewIncome from "./pages/NewIncome";
-import NewSowing from "./pages/NewSowing";
-import SowingList from "./pages/SowingList";
-import NewTransplanting from "./pages/NewTransplanting";
-import BlockList from "./pages/BlockList";
-import BarcodeCreator from "./pages/BarcodeCreator";
 import NewUser from "./pages/NewUser";
 import ListUser from "./pages/ListUser";
 import NewAsset from "./pages/NewAsset";
 import ListAsset from "./pages/ListAsset";
+import ServiceSetting from "./pages/ServiceSetting";
 
 function App() {
   return (
@@ -35,6 +29,10 @@ function App() {
         <Route
           path="/a7e05d80-6fa2-452c-b3c7-f4177fad2534"
           element={<Main children={<ListUser />} />}
+        />
+        <Route
+          path="/f8119f14-43bf-4b3b-906a-ed77be4bab3c"
+          element={<Main children={<ServiceSetting />} />}
         />
       </Routes>
     </BrowserRouter>

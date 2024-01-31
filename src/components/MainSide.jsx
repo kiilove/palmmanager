@@ -2,6 +2,7 @@ import React from "react";
 import { RiBookletLine } from "react-icons/ri";
 import { LuUsers } from "react-icons/lu";
 import { TbReportAnalytics } from "react-icons/tb";
+import { IoSettingsOutline } from "react-icons/io5";
 import { Menu } from "antd";
 import { useNavigate } from "react-router-dom";
 import Logo1 from "../assets/logo/jam_blank.png";
@@ -32,6 +33,12 @@ const MainSide = () => {
       "title3",
       "/03fba64a-09a4-43bd-9d3e-34adadf3527d",
       <TbReportAnalytics />
+    ),
+    getItem(
+      "서비스설정",
+      "title4",
+      "/f8119f14-43bf-4b3b-906a-ed77be4bab3c",
+      <IoSettingsOutline />
     ),
   ];
 

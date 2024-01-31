@@ -26,7 +26,7 @@ const Main = ({ children }) => {
         trigger={null}
         collapsible
         collapsed={collapsed}
-        className=" bg-white"
+        className=" bg-white hidden lg:inline"
         theme="light"
       >
         <MainSide />

@@ -1,7 +1,6 @@
 import dayjs from "dayjs";
 import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
-import { Timestamp } from "firebase/firestore";
 
 export const encryptData = (data, secretKey) => {
   return CryptoJS.AES.encrypt(data, secretKey).toString();
@@ -11,26 +10,80 @@ export const decryptData = (ciphertext, secretKey) => {
   const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
   return bytes.toString(CryptoJS.enc.Utf8);
 };
+
+export const generateToken = () => {
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let token = "";
+  for (let i = 0; i < 8; i++) {
+    token += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return token;
+};
+export const groupByKey = (list, key) => {
+  return list.reduce((acc, item) => {
+    if (!acc.some((accItem) => accItem.value === item[key])) {
+      acc.push({ value: item[key], label: item[key] });
+    }
+    return acc;
+  }, []);
+};
+
 export const generateUUID = () => {
   const uuid = uuidv4();
   return uuid;
 };
 
-export const getDateFormat = (value) => {
-  console.log(value);
-  const currentDateTime = dayjs(value).format("YYYY-MM-DD HH:mm:ss");
+export const generateToday = () => {
+  const currentDateTime = dayjs().format("YYYY-MM-DD HH:mm");
   return currentDateTime;
 };
 
-export const getToday = () => {
-  const currentDateTime = dayjs().format("YYYY-MM-DD HH:mm:ss");
-  return currentDateTime;
+export const generateFileName = (
+  originalFilename,
+  newFileName,
+  fileCount = 0
+) => {
+  if (!originalFilename) {
+    return;
+  } else {
+    const fileExtension = originalFilename.split(".").pop();
+
+    return `${newFileName}[${fileCount}].${fileExtension}`;
+  }
+};
+
+export const handleCategoriesWithGrades = (categories, grades) => {
+  let dummy = [];
+
+  categories
+
+    .sort((a, b) => a.contestCategoryIndex - b.contestCategoryIndex)
+    .map((category, cIdx) => {
+      const matchedGrades = grades
+        .filter((grade) => grade.refCategoryId === category.contestCategoryId)
+        .sort((a, b) => a.contestGradeIndex - b.contestGradeIndex);
+      const newCategoryItem = { ...category, grades: [...matchedGrades] };
+      dummy.push({ ...newCategoryItem });
+    });
+
+  return dummy;
 };
 
 export function getRandomNumber(min, max) {
   // min과 max 사이의 임의의 소수를 얻고, 그 소수를 min과 max 사이의 범위로 변환합니다.
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+export const handleArrayEdit = (originalArray, newValue, keyName, keyValue) => {
+  const newArray = [...originalArray];
+  const arrayIndex = newArray.findIndex((f) => f[keyName] === keyValue);
+
+  if (arrayIndex != -1) {
+    newArray.splice(arrayIndex, 1, newValue);
+  }
+  return newArray;
+};
 
 export function formatPhoneNumber(phoneNumber) {
   // 모든 "-"와 빈칸 제거
@@ -76,24 +129,9 @@ export function formatPhoneNumber(phoneNumber) {
   }
 }
 
-export const handleFilterdArray = (data = [], fieldName, queryString) => {
-  // const groupedData = _.groupBy(data, "transplantingBlock");
-  // console.log(groupedData);
-  const filteredData = data.filter((f) => f[fieldName] === queryString);
-  return filteredData;
-};
-
-export const encodeDate = (date) => {
-  let newDate;
-  if (!date) {
-    return null; // date가 유효하지 않으면 null 반환
-  }
-  if (typeof date === "object") {
-    const timestamp = new Timestamp(date.seconds, date.nanoseconds);
-    newDate = dayjs(timestamp.toDate()).format("YYYY-MM-DD");
-  } else {
-    newDate = dayjs(date.toDate()).format("YYYY-MM-DD");
-  }
-
-  return newDate;
+export const handlePhoneNumber = (ref, fieldName, value) => {
+  ref?.current.setFieldsValue({
+    ...ref?.current.getFieldsValue(),
+    [fieldName]: formatPhoneNumber(value),
+  });
 };
