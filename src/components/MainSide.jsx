@@ -35,7 +35,7 @@ const MainSide = () => {
       <TbReportAnalytics />
     ),
     getItem(
-      "서비스설정",
+      "환경설정",
       "title4",
       "/f8119f14-43bf-4b3b-906a-ed77be4bab3c",
       <IoSettingsOutline />
