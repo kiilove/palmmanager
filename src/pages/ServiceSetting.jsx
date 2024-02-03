@@ -23,6 +23,23 @@ import "./AutoComplete.css";
 
 const initUserStatus = ["재직", "파견", "휴직", "퇴사"];
 const initUserJob = ["정직원", "계약직", "임시직", "프리랜서", "외부직원"];
+const initCategory = ["전산장비", "소프트웨어", "가구", "기타"];
+const initCategory2 = [
+  {
+    key: 1,
+    name: "전산장비",
+    descriptionType: "설정안함",
+    descriptionPeriod: 0,
+  },
+  {
+    key: 2,
+    name: "소프트웨어",
+    descriptionType: "설정안함",
+    descriptionPeriod: 0,
+  },
+  { key: 3, name: "가구", descriptionType: "설정안함", descriptionPeriod: 0 },
+  { key: 4, name: "기타", descriptionType: "설정안함", descriptionPeriod: 0 },
+];
 const ServiceSetting = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
@@ -38,6 +55,11 @@ const ServiceSetting = () => {
   const [userStatusInput, setUserStatusInput] = useState();
   const [userJobList, setUserJobList] = useState([...initUserJob]);
   const [userJobInput, setUserJobInput] = useState();
+
+  const [assetCategoryList, setAssetCategoryList] = useState([
+    ...initCategory2,
+  ]);
+  const [assetCategoryInput, setAssetCategoryInput] = useState();
 
   const companyChildrenRef = useRef();
   const userStatusRef = useRef();
@@ -494,30 +516,139 @@ const ServiceSetting = () => {
                 width: "100%",
               }}
               labelAlign="right"
+              size="small"
               ref={assetRef}
             >
-              <Form.Item name="assetDepreciation" label="감가방식">
-                <Select
-                  allowClear
-                  options={[
-                    { key: "정액", value: "정액" },
-                    { key: "정량", value: "정량" },
-                    { key: "설정안함", value: "설정안함" },
-                  ]}
-                ></Select>
-              </Form.Item>
-              <Form.Item name="assetDepreciationPeriod" label="감가기간">
-                <Select
-                  allowClear
-                  options={[
-                    { key: "5년", value: "5년" },
-                    { key: "6년", value: "6년" },
-                    { key: "7년", value: "7년" },
-                    { key: "8년", value: "8년" },
-                    { key: "9년", value: "9년" },
-                    { key: "10년", value: "10년" },
-                  ]}
-                ></Select>
+              <Form.Item name="assetCategory" label="자산종류">
+                <List
+                  bordered
+                  size="small"
+                  dataSource={assetCategoryList}
+                  header={
+                    <div className="flex w-full justify-start gap-x-2">
+                      <Input
+                        placeholder="자산종류"
+                        onChange={(e) => setAssetCategoryInput(e.target.value)}
+                        value={assetCategoryInput}
+                        ref={assetRef}
+                        onKeyDown={(e) => {
+                          const list = [...assetCategoryList];
+                          if (
+                            e.key === "Enter" &&
+                            assetRef?.current?.input.value
+                          ) {
+                            const list = [...assetCategoryList];
+                            const newValue = {
+                              key: list.length + 1,
+                              name: assetRef?.current.input.value,
+                              descriptionType: "설정안함",
+                              descriptionPeriod: 0,
+                            };
+                            list.push({ ...newValue });
+                            setAssetCategoryList([...list]);
+                            setAssetCategoryInput("");
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          const list = [...assetCategoryList];
+                          const newValue = {
+                            key: list.length + 1,
+                            name: assetRef?.current.input.value,
+                            descriptionType: "설정안함",
+                            descriptionPeriod: 0,
+                          };
+                          list.push({ ...newValue });
+                          setAssetCategoryList([...list]);
+                          setAssetCategoryInput("");
+                        }}
+                      >
+                        추가
+                      </Button>
+                    </div>
+                  }
+                  renderItem={(item, iIdx) => (
+                    <List.Item
+                      actions={[
+                        <Popconfirm
+                          title="삭제"
+                          description="자산종류를 삭제하시겠습니까?"
+                          onConfirm={() =>
+                            handleChilrenRemove(
+                              iIdx,
+                              assetCategoryList,
+                              setAssetCategoryList,
+                              setAssetCategoryInput
+                            )
+                          }
+                          onCancel={() => {
+                            return;
+                          }}
+                          okText="예"
+                          cancelText="아니오"
+                          okType="default"
+                        >
+                          <Button danger style={{ border: 0 }}>
+                            <RiDeleteBin5Line />
+                          </Button>
+                        </Popconfirm>,
+                      ]}
+                    >
+                      <div className="flex w-full h-auto justify-center items-start flex-wrap flex-col">
+                        <div className="flex w-full">
+                          <Form.Item
+                            name={`assetDepreciationName_${item.key}`}
+                            value={item}
+                            label="자산종류:"
+                          >
+                            {item.name}
+                          </Form.Item>
+                        </div>
+                        <div className="flex w-full">
+                          <div className="flex w-full">
+                            <Form.Item
+                              name={`assetDepreciationType_${item.key}`}
+                              label="감가방식"
+                              className="w-full"
+                            >
+                              <Select
+                                allowClear
+                                options={[
+                                  { key: "정액법", value: "정액법" },
+                                  { key: "정률법", value: "정률법" },
+                                  { key: "설정안함", value: "설정안함" },
+                                ]}
+                                className="w-full"
+                              />
+                            </Form.Item>
+                          </div>
+                        </div>
+                        <div className="flex w-full">
+                          <div className="flex w-full">
+                            <Form.Item
+                              name={`assetDepreciationPeriod_${item.key}`}
+                              label="감가기간"
+                              className="w-full"
+                            >
+                              <Select
+                                allowClear
+                                options={[
+                                  { key: "5년", value: "5년" },
+                                  { key: "10년", value: "10년" },
+                                  { key: "6년", value: "6년" },
+                                  { key: "7년", value: "7년" },
+                                  { key: "8년", value: "8년" },
+                                  { key: "9년", value: "9년" },
+                                ]}
+                              />
+                            </Form.Item>
+                          </div>
+                        </div>
+                      </div>
+                    </List.Item>
+                  )}
+                ></List>
               </Form.Item>
             </Form>
           </Card>

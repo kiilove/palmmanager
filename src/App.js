@@ -8,6 +8,8 @@ import ListUser from "./pages/ListUser";
 import NewAsset from "./pages/NewAsset";
 import ListAsset from "./pages/ListAsset";
 import ServiceSetting from "./pages/ServiceSetting";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
           path="/f8119f14-43bf-4b3b-906a-ed77be4bab3c"
           element={<Main children={<ServiceSetting />} />}
         />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
     </BrowserRouter>
   );
