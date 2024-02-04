@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useContext, useRef, useState } from "react";
 import { ContentTitle } from "../commonstyles/Title";
 
 import { RiDeleteBin5Line } from "react-icons/ri";
@@ -20,6 +20,7 @@ import {
 import useImageUpload from "../hooks/useFireStorage";
 import { generateFileName, generateUUID } from "../functions";
 import "./AutoComplete.css";
+import { CurrentLoginContext } from "../context/CurrentLogin";
 
 const initUserStatus = ["재직", "파견", "휴직", "퇴사"];
 const initUserJob = ["정직원", "계약직", "임시직", "프리랜서", "외부직원"];
@@ -28,17 +29,17 @@ const initCategory2 = [
   {
     key: 1,
     name: "전산장비",
-    descriptionType: "설정안함",
-    descriptionPeriod: 0,
+    depreciationType: "설정안함",
+    depreciationPeriod: 0,
   },
   {
     key: 2,
     name: "소프트웨어",
-    descriptionType: "설정안함",
-    descriptionPeriod: 0,
+    depreciationType: "설정안함",
+    depreciationPeriod: 0,
   },
-  { key: 3, name: "가구", descriptionType: "설정안함", descriptionPeriod: 0 },
-  { key: 4, name: "기타", descriptionType: "설정안함", descriptionPeriod: 0 },
+  { key: 3, name: "가구", depreciationType: "설정안함", depreciationPeriod: 0 },
+  { key: 4, name: "기타", depreciationType: "설정안함", depreciationPeriod: 0 },
 ];
 const ServiceSetting = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -67,6 +68,8 @@ const ServiceSetting = () => {
   const companyRef = useRef();
   const userRef = useRef();
   const assetRef = useRef();
+
+  const { loginInfo } = useContext(CurrentLoginContext);
 
   const getBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -132,64 +135,33 @@ const ServiceSetting = () => {
     }
   };
 
-  const handleChilrenRemove = (idx, list, setList, setInput) => {
+  const handleChildrenRemove = (idx, list, setList, setInput) => {
     const newList = [...list];
     newList.splice(idx, 1);
     setList(() => [...newList]);
     setInput("");
   };
 
-  const renderTitle = (title) => (
-    <span>
-      {title}
-      <a
-        style={{
-          float: "right",
-        }}
-        href="https://www.google.com/search?q=antd"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        more
-      </a>
-    </span>
-  );
-  const renderItem = (title, count) => ({
-    value: title,
-    label: (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
-        {title}
-        <span>
-          <UserOutlined /> {count}
-        </span>
-      </div>
-    ),
-  });
-  const options = [
-    {
-      label: renderTitle("Libraries"),
-      options: [
-        renderItem("AntDesign", 10000),
-        renderItem("AntDesign UI", 10600),
-      ],
-    },
-    {
-      label: renderTitle("Solutions"),
-      options: [
-        renderItem("AntDesign UI FAQ", 60100),
-        renderItem("AntDesign FAQ", 30010),
-      ],
-    },
-    {
-      label: renderTitle("Articles"),
-      options: [renderItem("AntDesign design language", 100000)],
-    },
-  ];
+  const handleAssetCategory = (idx, key, value, list, setList) => {
+    const newList = [...list];
+    const newValue = { ...newList[idx], [key]: value };
+    newList.splice(idx, 1, newValue);
+    setList(() => [...newList]);
+  };
+
+  const handleSettingInfo = (refs = []) => {
+    const settings = {
+      ...companyRef?.current.getFieldsValue(),
+      companyChildrenList: [...companyChildrenList],
+      companyLogo: [...companyLogoFile],
+      userStatusList: [...userStatusList],
+      userJobList: [...userJobList],
+      assetCategoryList: [...assetCategoryList],
+      ownUser: { ...loginInfo },
+    };
+
+    console.log(settings);
+  };
 
   return (
     <div
@@ -201,6 +173,13 @@ const ServiceSetting = () => {
     >
       <div className="flex w-full ">
         <ContentTitle title="환경설정" />
+      </div>
+      <div className="flex w-full px-5">
+        <Button
+          onClick={() => handleSettingInfo([companyRef, userRef, assetRef])}
+        >
+          저장
+        </Button>
       </div>
       <div className="flex w-full h-full flex-wrap p-4 gap-2">
         <div
@@ -306,7 +285,7 @@ const ServiceSetting = () => {
                                 title="삭제"
                                 description="자회사를 삭제하시겠습니까?"
                                 onConfirm={() =>
-                                  handleChilrenRemove(
+                                  handleChildrenRemove(
                                     iIdx,
                                     companyChildrenList,
                                     setCompanyChildrenList,
@@ -401,7 +380,7 @@ const ServiceSetting = () => {
                           title="삭제"
                           description="재직상태종류를 삭제하시겠습니까?"
                           onConfirm={() =>
-                            handleChilrenRemove(
+                            handleChildrenRemove(
                               iIdx,
                               userStatusList,
                               setUserStatusList,
@@ -470,7 +449,7 @@ const ServiceSetting = () => {
                           title="삭제"
                           description="재직상태종류를 삭제하시겠습니까?"
                           onConfirm={() =>
-                            handleChilrenRemove(
+                            handleChildrenRemove(
                               iIdx,
                               userJobList,
                               setUserJobList,
@@ -541,8 +520,8 @@ const ServiceSetting = () => {
                             const newValue = {
                               key: list.length + 1,
                               name: assetRef?.current.input.value,
-                              descriptionType: "설정안함",
-                              descriptionPeriod: 0,
+                              depreciationType: "설정안함",
+                              depreciationPeriod: 0,
                             };
                             list.push({ ...newValue });
                             setAssetCategoryList([...list]);
@@ -556,8 +535,8 @@ const ServiceSetting = () => {
                           const newValue = {
                             key: list.length + 1,
                             name: assetRef?.current.input.value,
-                            descriptionType: "설정안함",
-                            descriptionPeriod: 0,
+                            depreciationType: "설정안함",
+                            depreciationPeriod: 0,
                           };
                           list.push({ ...newValue });
                           setAssetCategoryList([...list]);
@@ -568,86 +547,117 @@ const ServiceSetting = () => {
                       </Button>
                     </div>
                   }
-                  renderItem={(item, iIdx) => (
-                    <List.Item
-                      actions={[
-                        <Popconfirm
-                          title="삭제"
-                          description="자산종류를 삭제하시겠습니까?"
-                          onConfirm={() =>
-                            handleChilrenRemove(
-                              iIdx,
-                              assetCategoryList,
-                              setAssetCategoryList,
-                              setAssetCategoryInput
-                            )
-                          }
-                          onCancel={() => {
-                            return;
-                          }}
-                          okText="예"
-                          cancelText="아니오"
-                          okType="default"
-                        >
-                          <Button danger style={{ border: 0 }}>
-                            <RiDeleteBin5Line />
-                          </Button>
-                        </Popconfirm>,
-                      ]}
-                    >
-                      <div className="flex w-full h-auto justify-center items-start flex-wrap flex-col">
-                        <div className="flex w-full">
-                          <Form.Item
-                            name={`assetDepreciationName_${item.key}`}
-                            value={item}
-                            label="자산종류:"
+                  renderItem={(item, iIdx) => {
+                    return (
+                      <List.Item
+                        actions={[
+                          <Popconfirm
+                            title="삭제"
+                            description="자산종류를 삭제하시겠습니까?"
+                            onConfirm={() =>
+                              handleChildrenRemove(
+                                iIdx,
+                                assetCategoryList,
+                                setAssetCategoryList,
+                                setAssetCategoryInput
+                              )
+                            }
+                            onCancel={() => {
+                              return;
+                            }}
+                            okText="예"
+                            cancelText="아니오"
+                            okType="default"
                           >
-                            {item.name}
-                          </Form.Item>
-                        </div>
-                        <div className="flex w-full">
+                            <Button danger style={{ border: 0 }}>
+                              <RiDeleteBin5Line />
+                            </Button>
+                          </Popconfirm>,
+                        ]}
+                      >
+                        <div className="flex w-full h-auto justify-center items-start flex-wrap flex-col">
                           <div className="flex w-full">
                             <Form.Item
-                              name={`assetDepreciationType_${item.key}`}
-                              label="감가방식"
-                              className="w-full"
+                              name={`assetDepreciationName_${item.key}`}
+                              value={item}
+                              label="자산종류:"
                             >
-                              <Select
-                                allowClear
-                                options={[
-                                  { key: "정액법", value: "정액법" },
-                                  { key: "정률법", value: "정률법" },
-                                  { key: "설정안함", value: "설정안함" },
-                                ]}
+                              {item.name}
+                            </Form.Item>
+                          </div>
+                          <div className="flex w-full">
+                            <div className="flex w-full">
+                              <Form.Item
+                                name={`assetDepreciationType_${item.key}`}
+                                label="감가방식"
                                 className="w-full"
-                              />
-                            </Form.Item>
+                              >
+                                <Select
+                                  allowClear
+                                  defaultValue={
+                                    assetCategoryList[iIdx].depreciationType
+                                  }
+                                  onChange={(value) =>
+                                    handleAssetCategory(
+                                      iIdx,
+                                      "depreciationType",
+                                      value,
+                                      assetCategoryList,
+                                      setAssetCategoryList
+                                    )
+                                  }
+                                  options={[
+                                    { key: "정액법", value: "정액법" },
+                                    { key: "정률법", value: "정률법" },
+                                    { key: "설정안함", value: "설정안함" },
+                                  ]}
+                                  className="w-full"
+                                />
+                              </Form.Item>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex w-full">
                           <div className="flex w-full">
-                            <Form.Item
-                              name={`assetDepreciationPeriod_${item.key}`}
-                              label="감가기간"
-                              className="w-full"
-                            >
-                              <Select
-                                allowClear
-                                options={[
-                                  { key: "5년", value: "5년" },
-                                  { key: "10년", value: "10년" },
-                                  { key: "6년", value: "6년" },
-                                  { key: "7년", value: "7년" },
-                                  { key: "8년", value: "8년" },
-                                  { key: "9년", value: "9년" },
-                                ]}
-                              />
-                            </Form.Item>
+                            <div className="flex w-full">
+                              <Form.Item
+                                name={`assetDepreciationPeriod_${item.key}`}
+                                label="감가기간"
+                                className="w-full"
+                              >
+                                <Select
+                                  allowClear
+                                  onChange={(value) =>
+                                    handleAssetCategory(
+                                      iIdx,
+                                      "depreciationPeriod",
+                                      value,
+                                      assetCategoryList,
+                                      setAssetCategoryList
+                                    )
+                                  }
+                                  defaultValue={
+                                    assetCategoryList[iIdx].depreciationPeriod
+                                  }
+                                  options={[
+                                    { key: "5년", value: 5, label: "5년" },
+                                    { key: "10년", value: 10, label: "10년" },
+                                    { key: "6년", value: 6, label: "6년" },
+                                    { key: "7년", value: 7, label: "7년" },
+                                    { key: "8년", value: 8, label: "8년" },
+                                    { key: "9년", value: 9, label: "9년" },
+                                    {
+                                      key: "설정안함",
+                                      value: 0,
+                                      label: "설정안함",
+                                    },
+                                  ]}
+                                />
+                              </Form.Item>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </List.Item>
-                  )}
+                      </List.Item>
+                    );
+                  }}
                 ></List>
               </Form.Item>
             </Form>

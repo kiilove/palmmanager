@@ -13,7 +13,10 @@ const Login = () => {
         className="flex gap-y-1 w-full h-screen flex-col justify-start items-center bg-white"
         style={{ maxWidth: "1000px" }}
       >
-        <div className="flex h-14 justify-end items-center w-full px-5">
+        <div
+          className="flex h-14 justify-end items-center w-full px-5 cursor-pointer"
+          onClick={() => navigate("/")}
+        >
           <span style={{ fontSize: "30px", fontWeight: "bold" }}>
             <LiaTimesSolid />
           </span>
