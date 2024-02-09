@@ -14,6 +14,7 @@ import {
   CurrentLoginContext,
   CurrentLoginProvider,
 } from "./context/CurrentLogin";
+import Success from "./pages/Success";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
           />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/success" element={<Success />} />
         </Routes>
       </BrowserRouter>
     </CurrentLoginProvider>

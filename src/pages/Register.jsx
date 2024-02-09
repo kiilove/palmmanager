@@ -1,9 +1,18 @@
-import { Button, Checkbox, Form, Input, Space } from "antd";
+import { Button, Checkbox, Form, Input, Space, notification } from "antd";
 import Password from "antd/es/input/Password";
 import React, { useRef, useState } from "react";
 import { TermServiceText } from "../components/TermServiceV202402";
 import { useDaumPostcodePopup } from "react-daum-postcode";
 import { Timestamp } from "firebase/firestore";
+import { encryptObject, trimObjectValue } from "../functions";
+import { useFirestoreAddData } from "../hooks/useFirestore";
+import { useNavigate } from "react-router-dom";
+import useFirebaseAuth from "../hooks/useFireAuth";
+import {
+  IoCheckmarkCircleOutline,
+  IoAlertCircleOutline,
+} from "react-icons/io5";
+import { initCategory, initUserJob, initUserStatus } from "../InitValues";
 
 const initApplys = {
   serviceApply: false,
@@ -44,6 +53,31 @@ const Register = () => {
   const marketingSMSRef = useRef();
 
   const [applys, setApplys] = useState({ ...initApplys });
+  const [checkedId, setCheckedId] = useState({ value: "", isUnique: false });
+
+  const userAdd = useFirestoreAddData();
+  const memberSettingAdd = useFirestoreAddData();
+  const { checkExistID, signUpWithEmail } = useFirebaseAuth();
+
+  const navigate = useNavigate();
+
+  const [api, contextHolder] = notification.useNotification();
+  const openNotification = (
+    apiType,
+    title,
+    message,
+    placement,
+    duration,
+    maxCount
+  ) => {
+    api[apiType]({
+      message: title,
+      description: message,
+      placement,
+      duration,
+      maxCount,
+    });
+  };
 
   const scriptUrl =
     "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
@@ -73,8 +107,6 @@ const Register = () => {
         // compantExtraAddress:
         //   extraRef?.current.getFieldsValue().compantExtraAddress || "",
       });
-
-      console.log(loginRef?.current.getFieldsValue());
     }
   };
 
@@ -83,8 +115,109 @@ const Register = () => {
   };
 
   const handleRegisterFinished = (value) => {
-    const newValue = { ...value, ...applys };
-    console.log(newValue);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // 필수 입력 필드가 빈 값인지 확인
+    const hasEmptyRequiredFields =
+      !value.userEmail ||
+      !value.userPassword ||
+      !value.userPasswordVerify ||
+      !value.companyName ||
+      !value.companyTel;
+
+    // 중복 체크가 완료되었는지 확인
+    const isIdCheckedAndUnique = checkedId.isUnique;
+
+    if (hasEmptyRequiredFields || !isIdCheckedAndUnique) {
+      // 화면 맨 위로 스크롤
+
+      if (hasEmptyRequiredFields) {
+        // 필수 입력 필드가 빈 값인 경우 메시지 표시
+        openNotification(
+          "error",
+          "입력 오류",
+          "모든 필수 항목을 입력해주세요.",
+          "topRight",
+          3
+        );
+      } else if (!isIdCheckedAndUnique) {
+        // 중복 체크가 안 된 경우 메시지 표시
+        openNotification(
+          "error",
+          "중복 체크 오류",
+          "아이디 중복 체크를 먼저 해주세요.",
+          "topRight",
+          3
+        );
+      }
+
+      return; // 함수 종료
+    } else {
+      const encryptedValue = encryptObject(
+        { ...trimObjectValue(value) },
+        process.env.REACT_APP_SECRET_KEY
+      );
+      delete encryptedValue.userPasswordVerify;
+      const newValue = { ...encryptedValue, ...applys };
+      const trimValue = { ...trimObjectValue(value) };
+
+      handleAddUser(trimValue, newValue);
+    }
+  };
+
+  const handleAddUser = async (signInValue, profileValue) => {
+    if (!profileValue) {
+      return;
+    }
+
+    if (Object.values(profileValue).some((s) => s === undefined)) {
+      return;
+    }
+
+    let newProfileValue = { ...profileValue };
+    try {
+      await signUpWithEmail(
+        signInValue.userEmail,
+        signInValue.userPassword,
+        async (data) => {
+          newProfileValue.userID = data.user.uid;
+          try {
+            await userAdd.addData(
+              "members",
+              { ...newProfileValue },
+              async (data) => {
+                const demoEndedAtDate = new Date();
+                demoEndedAtDate.setDate(demoEndedAtDate.getDate() + 7); // 현재 날짜에 7일 추가
+                const demoEndedAt = Timestamp.fromDate(demoEndedAtDate);
+
+                await memberSettingAdd.addData(
+                  "memberSetting",
+                  {
+                    userID: data.userID,
+                    userStatus: [...initUserStatus],
+                    userJobs: [...initUserJob],
+                    categories: [...initCategory],
+                    firstCreatedAt: Timestamp.fromDate(new Date()),
+                    memberShipType: "demo",
+                    demoEndedAt,
+                    memberShipExpiredAt: demoEndedAt,
+                  },
+                  (data) => {
+                    navigate("/success", { state: { message: "success" } });
+                  }
+                );
+              }
+            );
+          } catch (error) {
+            console.log(error);
+          }
+        }
+      ).catch((error) => {
+        console.log(error);
+      });
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const sectionHeader = ({ title, context = null }) => (
@@ -126,7 +259,6 @@ const Register = () => {
             회원가입
           </span>
         </div>
-
         <Form
           labelCol={{
             span: 6,
@@ -142,21 +274,106 @@ const Register = () => {
           <div className="flex h-14 justify-center items-center w-full">
             {sectionHeader({ title: "로그인 정보" })}
           </div>
-          <Form.Item name="userId" label="아이디" required>
-            <Input
-              className=" rounded"
-              placeholder="아이디(이메일) 입력(필수)"
-            />
+          <Form.Item label="이메일" required>
+            <Space.Compact className="w-full">
+              <Form.Item
+                name="userEmail"
+                noStyle
+                rules={[
+                  { required: true, message: "이메일을 입력해주세요." },
+                  { type: "email", message: "유효한 이메일 형식이 아닙니다." },
+                ]}
+              >
+                <Input
+                  className="rounded"
+                  placeholder="이메일 입력(필수)"
+                  onChange={(e) => {
+                    e.target.value === ""
+                      ? setCheckedId({ value: "", isUnique: false })
+                      : setCheckedId(() => ({
+                          isUnique: false,
+                          value: e.target.value,
+                        }));
+                  }}
+                />
+              </Form.Item>
+              <Button
+                disabled={loginRef?.current?.getFieldsValue().userId === ""}
+                onClick={() => {
+                  new Promise((resolve, reject) => {
+                    const userEmail =
+                      loginRef?.current.getFieldsValue().userEmail;
+                    resolve(checkExistID("userEmail", userEmail));
+                  })
+                    .then((isUnique) => {
+                      setCheckedId((prevState) => ({
+                        ...prevState,
+                        isUnique: isUnique,
+                      }));
+                    })
+                    .catch((error) => {
+                      console.error(error);
+                      // Handle any errors here
+                    });
+                }}
+                type={checkedId.isUnique ? "primary" : "default"}
+                className={checkedId.isUnique && "bg-blue-500"}
+              >
+                {checkedId.isUnique ? (
+                  <div className="flex justify-start items-center h-full">
+                    사용가능
+                    <span className="text-lg ml-2">
+                      <IoCheckmarkCircleOutline />
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex justify-start items-center h-full">
+                    중복체크
+                    <span className="text-lg ml-2">
+                      <IoAlertCircleOutline />
+                    </span>
+                  </div>
+                )}
+              </Button>
+            </Space.Compact>
           </Form.Item>
-          <Form.Item name="userPassword" label="비밀번호" required>
-            <Password
+          <Form.Item
+            name="userPassword"
+            label="비밀번호"
+            rules={[
+              { required: true, message: "비밀번호를 입력해주세요." },
+              { min: 6, message: "비밀번호는 6자 이상이어야 합니다." },
+              {
+                pattern: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/,
+                message:
+                  "비밀번호는 6자 이상이며, 최소 한 개의 영문자와 숫자를 포함해야 합니다.",
+              },
+            ]}
+          >
+            <Input.Password
               className=" rounded"
               placeholder="6이상 영문과 숫자 조합"
               visibilityToggle={false}
             />
           </Form.Item>
-          <Form.Item name="userPasswordVerify" label="비밀번호 확인" required>
-            <Password
+          <Form.Item
+            name="userPasswordVerify"
+            label="비밀번호 확인"
+            rules={[
+              { required: true, message: "비밀번호 확인을 입력해주세요." },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue("userPassword") === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(
+                    new Error("입력하신 비밀번호와 일치하지 않습니다.")
+                  );
+                },
+              }),
+            ]}
+          >
+            <Input.Password
               className=" rounded "
               placeholder="비밀번호 확인"
               visibilityToggle={false}
@@ -178,13 +395,6 @@ const Register = () => {
               required
             />
           </Form.Item>
-          <Form.Item name="companyEmail" label="관리자 이메일" required>
-            <Input
-              className=" rounded"
-              placeholder="비밀번호 찾기 위해 정확한 이메일 입력"
-              required
-            />
-          </Form.Item>
           <div className="flex h-14 justify-center items-center w-full">
             {sectionHeader({ title: "선택 정보" })}
           </div>
@@ -195,6 +405,7 @@ const Register = () => {
                   className=" rounded"
                   style={{ width: "100px" }}
                   placeholder="우편번호"
+                  disabled
                 />
               </Form.Item>
               <Button
@@ -388,8 +599,10 @@ const Register = () => {
               <Button
                 className=" bg-gray-700 w-full h-full rounded"
                 style={{ border: "1px solid", height: "50px" }}
-                htmlType="submit"
                 disabled={!applys.serviceApply || !applys.personalApply}
+                onClick={() =>
+                  handleRegisterFinished(loginRef?.current.getFieldsValue())
+                }
               >
                 {!applys.serviceApply || !applys.personalApply ? (
                   <span
@@ -411,6 +624,7 @@ const Register = () => {
           </div>
         </Form>
       </div>
+      {contextHolder}
     </div>
   );
 };

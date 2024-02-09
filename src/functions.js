@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { v4 as uuidv4 } from "uuid";
 import CryptoJS from "crypto-js";
+import { isArray } from "lodash";
 
 export const encryptData = (data, secretKey) => {
   return CryptoJS.AES.encrypt(data, secretKey).toString();
@@ -9,6 +10,56 @@ export const encryptData = (data, secretKey) => {
 export const decryptData = (ciphertext, secretKey) => {
   const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
   return bytes.toString(CryptoJS.enc.Utf8);
+};
+
+export const encryptObject = (data = {}, secretKey) => {
+  if (!data || !secretKey) {
+    return;
+  }
+
+  if (isArray(data)) {
+    return;
+  }
+  const newData = { ...data };
+  Object.keys(newData).map((key) => {
+    const newValue =
+      newData[key] !== "" ? encryptData(newData[key], secretKey) : "";
+
+    newData[key] = newValue;
+  });
+
+  return newData;
+};
+
+export const decryptObject = (data = {}, secretKey) => {
+  if (!data || !secretKey) {
+    return;
+  }
+
+  if (isArray(data)) {
+    return;
+  }
+  const newData = { ...data };
+  Object.keys(newData).map((key) => {
+    const newValue =
+      newData[key] !== "" ? decryptData(newData[key], secretKey) : "";
+
+    newData[key] = newValue;
+  });
+
+  return newData;
+};
+
+export const trimObjectValue = (data = {}) => {
+  if (!data) {
+    return;
+  }
+  let newData = { ...data };
+  Object.keys(newData).map((key) => {
+    const newValue = newData[key] ? newData[key].trim() : "";
+    newData[key] = newValue;
+  });
+  return newData;
 };
 
 export const generateToken = () => {
