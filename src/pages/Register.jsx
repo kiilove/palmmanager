@@ -171,6 +171,20 @@ const Register = () => {
     }
 
     if (Object.values(profileValue).some((s) => s === undefined)) {
+      const undefinedKeys = Object.keys(profileValue).map((key, kIdx) => {
+        if (profileValue[key] === undefined) {
+          return key;
+        }
+      });
+      openNotification(
+        "error",
+        "회원가입 오류",
+        `정확하지 않은 데이터가 포함되어있습니다.${JSON.stringify(
+          undefinedKeys
+        )}`,
+        "topRight",
+        3
+      );
       return;
     }
 
@@ -201,6 +215,10 @@ const Register = () => {
                     memberShipType: "demo",
                     demoEndedAt,
                     memberShipExpiredAt: demoEndedAt,
+                    isCompanyChildren: false,
+                    companyLogo: [],
+                    companyName: loginRef?.current.getFieldsValue().companyName,
+                    companyChildren: [],
                   },
                   (data) => {
                     navigate("/success", { state: { message: "success" } });

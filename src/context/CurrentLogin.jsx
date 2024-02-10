@@ -11,9 +11,12 @@ const testLoginInfo = {
 };
 export const CurrentLoginProvider = ({ children }) => {
   const [loginInfo, setLoginInfo] = useState({});
+  const [memberSettings, setMemberSettings] = useState({});
 
   return (
-    <CurrentLoginContext.Provider value={{ loginInfo, setLoginInfo }}>
+    <CurrentLoginContext.Provider
+      value={{ loginInfo, setLoginInfo, memberSettings, setMemberSettings }}
+    >
       {children}
     </CurrentLoginContext.Provider>
   );

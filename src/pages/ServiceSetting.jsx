@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { ContentTitle } from "../commonstyles/Title";
 
 import { RiDeleteBin5Line } from "react-icons/ri";
@@ -11,8 +11,10 @@ import {
   Input,
   List,
   Popconfirm,
+  Result,
   Select,
   Space,
+  Spin,
   Switch,
   Table,
   Upload,
@@ -21,6 +23,7 @@ import useImageUpload from "../hooks/useFireStorage";
 import { generateFileName, generateUUID } from "../functions";
 import "./AutoComplete.css";
 import { CurrentLoginContext } from "../context/CurrentLogin";
+import useFirebaseAuth from "../hooks/useFireAuth";
 
 const initUserStatus = ["재직", "파견", "휴직", "퇴사"];
 const initUserJob = ["정직원", "계약직", "임시직", "프리랜서", "외부직원"];
@@ -42,6 +45,7 @@ const initCategory2 = [
   { key: 4, name: "기타", depreciationType: "설정안함", depreciationPeriod: 0 },
 ];
 const ServiceSetting = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
@@ -68,8 +72,12 @@ const ServiceSetting = () => {
   const companyRef = useRef();
   const userRef = useRef();
   const assetRef = useRef();
+  const [form] = Form.useForm();
 
-  const { loginInfo } = useContext(CurrentLoginContext);
+  const { loginInfo, memberSettings, setMemberSettins } =
+    useContext(CurrentLoginContext);
+
+  const { logOut } = useFirebaseAuth;
 
   const getBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -157,139 +165,477 @@ const ServiceSetting = () => {
       userStatusList: [...userStatusList],
       userJobList: [...userJobList],
       assetCategoryList: [...assetCategoryList],
-      ownUser: { ...loginInfo },
+      // ownUser: loginInfo.uid,
     };
 
     console.log(settings);
   };
 
+  useEffect(() => {
+    console.log(memberSettings);
+    const timer = setTimeout(() => {
+      if (!memberSettings) {
+        // 3초 후 currentUser가 없다면 로그인 상태가 아니라고 판단
+        setIsLoading(false);
+        // 로그인 페이지에 머물도록 특별한 액션이 필요 없음
+      }
+    }, 3000);
+    if (memberSettings?.companyName) {
+      const promises = [
+        setCompanyLogoFile(() => [...memberSettings.companyLogo]),
+        setCompanyChildrenList(() => [...memberSettings.companyChildren]),
+        form?.setFieldValue("companyName", memberSettings.companyName),
+        form?.setFieldValue(
+          "isCompanyChildren",
+          memberSettings.isCompanyChildren
+        ),
+        clearTimeout(timer),
+      ];
+      Promise.all(promises).then(() => {
+        setIsLoading(false);
+      });
+    }
+    return () => clearTimeout(timer);
+  }, [memberSettings]);
+
   return (
-    <div
-      className="flex w-full h-full flex-col rounded-lg"
-      style={{
-        backgroundColor: "#fff",
-        minHeight: "100%",
-      }}
-    >
-      <div className="flex w-full ">
-        <ContentTitle title="환경설정" />
-      </div>
-      <div className="flex w-full px-5">
-        <Button
-          onClick={() => handleSettingInfo([companyRef, userRef, assetRef])}
-        >
-          저장
-        </Button>
-      </div>
-      <div className="flex w-full h-full flex-wrap p-4 gap-2">
+    <>
+      {isLoading && (
+        <div className="w-full h-screen flex justify-center items-center">
+          <Spin />
+        </div>
+      )}
+      {!isLoading && !memberSettings?.companyName && (
+        <div className="w-full h-screen flex justify-center items-center">
+          <Result
+            status="error"
+            title="회원정보 오류"
+            subTitle={`회원정보를 불러오는데 문제가 발생했습니다. ${(
+              <br />
+            )}다시 한번 로그인 시도해주세요. ${(
+              <br />
+            )}문제가 계속 반복된다면 jbkim@jncore.com으로 이메일 부탁드립니다.`}
+            extra={[
+              <Button
+                key="logout"
+                onClick={() => {
+                  logOut();
+                }}
+              >
+                다시 로그인
+              </Button>,
+            ]}
+          />
+        </div>
+      )}
+      {!isLoading && (
         <div
-          className="flex w-full md:w-1/2 lg:w-1/3"
-          style={{ maxWidth: "540px" }}
+          className="flex w-full h-full flex-col rounded-lg"
+          style={{
+            backgroundColor: "#fff",
+            minHeight: "100%",
+          }}
         >
-          <Card
-            title="회사설정"
-            size="small"
-            className="w-full "
-            headStyle={{ backgroundColor: "#efeff0", color: "#000000" }}
-          >
-            <Form
-              labelCol={{
-                span: 6,
-              }}
-              style={{
-                width: "100%",
-              }}
-              labelAlign="right"
-              ref={companyRef}
+          <div className="flex w-full ">
+            <ContentTitle title="환경설정" />
+          </div>
+          <div className="flex w-full px-5">
+            <Button
+              onClick={() => handleSettingInfo([companyRef, userRef, assetRef])}
             >
-              <Form.Item name="companyLogo" label="회사로고">
-                <Upload
-                  listType="picture-card"
-                  fileList={companyLogoFile}
-                  onPreview={handlePreview}
-                  onRemove={handleCompanyLogoFileRemove}
-                  customRequest={handleCompanyLogoUploadAdd}
+              저장
+            </Button>
+          </div>
+          <div className="flex w-full h-full flex-wrap p-4 gap-2">
+            <div
+              className="flex w-full md:w-1/2 lg:w-1/3"
+              style={{ maxWidth: "540px" }}
+            >
+              <Card
+                title="회사설정"
+                size="small"
+                className="w-full "
+                headStyle={{ backgroundColor: "#efeff0", color: "#000000" }}
+              >
+                <Form
+                  labelCol={{
+                    span: 6,
+                  }}
+                  style={{
+                    width: "100%",
+                  }}
+                  labelAlign="right"
+                  ref={companyRef}
+                  form={form}
                 >
-                  {companyLogoFile.length >= 2 ? null : uploadButton}
-                </Upload>
-              </Form.Item>
-              <Form.Item name="companyName" label="회사명">
-                <Input />
-              </Form.Item>
-              <Form.Item name="isCompanyChildren" label="자회사보유">
-                <Switch
-                  defaultChecked={false}
-                  onChange={setIsCompanyChildren}
-                />
-              </Form.Item>
-              {isCompanyChildren && (
-                <Form.Item label="자회사관리">
-                  {companyChildrenEditMode ? (
-                    <Form.Item noStyle name="companyChildredName">
-                      <Space.Compact>
-                        <Input placeholder="회사명" />
-                        <Button>m</Button>
-                        <Button>수정</Button>
-                      </Space.Compact>
+                  <Form.Item name="companyLogo" label="회사로고">
+                    <Upload
+                      listType="picture-card"
+                      fileList={companyLogoFile}
+                      onPreview={handlePreview}
+                      onRemove={handleCompanyLogoFileRemove}
+                      customRequest={handleCompanyLogoUploadAdd}
+                    >
+                      {companyLogoFile.length >= 2 ? null : uploadButton}
+                    </Upload>
+                  </Form.Item>
+                  <Form.Item
+                    name="companyName"
+                    label="회사명"
+                    initialValue={memberSettings.companyName}
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item
+                    name="isCompanyChildren"
+                    label="자회사보유"
+                    initialValue={memberSettings.isCompanyChildren}
+                  >
+                    <Switch
+                      checked={memberSettings.isCompanyChildren}
+                      onChange={setIsCompanyChildren}
+                    />
+                  </Form.Item>
+                  {isCompanyChildren && (
+                    <Form.Item label="자회사관리">
+                      {companyChildrenEditMode ? (
+                        <Form.Item noStyle name="companyChildredName">
+                          <Space.Compact>
+                            <Input placeholder="회사명" />
+                            <Button>m</Button>
+                            <Button>수정</Button>
+                          </Space.Compact>
+                        </Form.Item>
+                      ) : (
+                        <Form.Item noStyle name="companyChildredName">
+                          <List
+                            size="small"
+                            bordered
+                            header={
+                              <div className="flex w-full justify-start gap-x-2">
+                                <Input
+                                  placeholder="자회사명"
+                                  onChange={(e) =>
+                                    setCompanyChildrenInput(e.target.value)
+                                  }
+                                  value={companyChildrenInput}
+                                  ref={companyChildrenRef}
+                                  onKeyDown={(e) => {
+                                    const list = [...companyChildrenList];
+                                    if (
+                                      e.key === "Enter" &&
+                                      companyChildrenRef?.current?.input.value
+                                    ) {
+                                      const list = [...companyChildrenList];
+                                      list.push(
+                                        companyChildrenRef?.current.input.value
+                                      );
+                                      setCompanyChildrenList([...list]);
+                                      setCompanyChildrenInput("");
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  onClick={() => {
+                                    const list = [...companyChildrenList];
+
+                                    list.push(
+                                      companyChildrenRef?.current.input.value
+                                    );
+
+                                    setCompanyChildrenList([...list]);
+                                    setCompanyChildrenInput("");
+                                  }}
+                                >
+                                  추가
+                                </Button>
+                              </div>
+                            }
+                            dataSource={companyChildrenList}
+                            renderItem={(item, iIdx) => (
+                              <List.Item
+                                actions={[
+                                  <Popconfirm
+                                    title="삭제"
+                                    description="자회사를 삭제하시겠습니까?"
+                                    onConfirm={() =>
+                                      handleChildrenRemove(
+                                        iIdx,
+                                        companyChildrenList,
+                                        setCompanyChildrenList,
+                                        setCompanyChildrenInput
+                                      )
+                                    }
+                                    onCancel={() => {
+                                      return;
+                                    }}
+                                    okText="예"
+                                    cancelText="아니오"
+                                    okType="default"
+                                  >
+                                    <Button danger style={{ border: 0 }}>
+                                      <RiDeleteBin5Line />
+                                    </Button>
+                                  </Popconfirm>,
+                                ]}
+                              >
+                                {item}
+                              </List.Item>
+                            )}
+                          />
+                        </Form.Item>
+                      )}
                     </Form.Item>
-                  ) : (
-                    <Form.Item noStyle name="companyChildredName">
-                      <List
-                        size="small"
-                        bordered
-                        header={
-                          <div className="flex w-full justify-start gap-x-2">
-                            <Input
-                              placeholder="자회사명"
-                              onChange={(e) =>
-                                setCompanyChildrenInput(e.target.value)
+                  )}
+                </Form>
+              </Card>
+            </div>
+            <div
+              className="flex w-full md:w-1/2 lg:w-1/3"
+              style={{ maxWidth: "540px" }}
+            >
+              <Card
+                title="구성원설정"
+                size="small"
+                className="w-full "
+                headStyle={{ backgroundColor: "#efeff0", color: "#000000" }}
+              >
+                <Form
+                  labelCol={{
+                    span: 8,
+                  }}
+                  style={{
+                    width: "100%",
+                  }}
+                  labelAlign="right"
+                  ref={userRef}
+                >
+                  <Form.Item name="userStateList" label="재직상태종류">
+                    <List
+                      bordered
+                      size="small"
+                      dataSource={userStatusList}
+                      header={
+                        <div className="flex w-full justify-start gap-x-2">
+                          <Input
+                            placeholder="재직종류"
+                            onChange={(e) => setUserStatusInput(e.target.value)}
+                            value={userStatusInput}
+                            ref={userStatusRef}
+                            onKeyDown={(e) => {
+                              const list = [...userStatusList];
+                              if (
+                                e.key === "Enter" &&
+                                userStatusRef?.current?.input.value
+                              ) {
+                                const list = [...userStatusList];
+                                list.push(userStatusRef?.current.input.value);
+                                setUserStatusList([...list]);
+                                setUserStatusInput("");
                               }
-                              value={companyChildrenInput}
-                              ref={companyChildrenRef}
-                              onKeyDown={(e) => {
-                                const list = [...companyChildrenList];
-                                if (
-                                  e.key === "Enter" &&
-                                  companyChildrenRef?.current?.input.value
-                                ) {
-                                  const list = [...companyChildrenList];
-                                  list.push(
-                                    companyChildrenRef?.current.input.value
-                                  );
-                                  setCompanyChildrenList([...list]);
-                                  setCompanyChildrenInput("");
-                                }
+                            }}
+                          />
+                          <Button
+                            onClick={() => {
+                              const list = [...userStatusList];
+                              list.push(userStatusRef?.current.input.value);
+                              setUserStatusList([...list]);
+                              setUserStatusInput("");
+                            }}
+                          >
+                            추가
+                          </Button>
+                        </div>
+                      }
+                      renderItem={(item, iIdx) => (
+                        <List.Item
+                          actions={[
+                            <Popconfirm
+                              title="삭제"
+                              description="재직상태종류를 삭제하시겠습니까?"
+                              onConfirm={() =>
+                                handleChildrenRemove(
+                                  iIdx,
+                                  userStatusList,
+                                  setUserStatusList,
+                                  setUserStatusInput
+                                )
+                              }
+                              onCancel={() => {
+                                return;
                               }}
-                            />
-                            <Button
-                              onClick={() => {
-                                const list = [...companyChildrenList];
-
-                                list.push(
-                                  companyChildrenRef?.current.input.value
-                                );
-
-                                setCompanyChildrenList([...list]);
-                                setCompanyChildrenInput("");
-                              }}
+                              okText="예"
+                              cancelText="아니오"
+                              okType="default"
                             >
-                              추가
-                            </Button>
-                          </div>
-                        }
-                        dataSource={companyChildrenList}
-                        renderItem={(item, iIdx) => (
+                              <Button danger style={{ border: 0 }}>
+                                <RiDeleteBin5Line />
+                              </Button>
+                            </Popconfirm>,
+                          ]}
+                        >
+                          {item}
+                        </List.Item>
+                      )}
+                    ></List>
+                  </Form.Item>
+                  <Form.Item name="userStateList" label="근무형태종류">
+                    <List
+                      bordered
+                      size="small"
+                      dataSource={userJobList}
+                      header={
+                        <div className="flex w-full justify-start gap-x-2">
+                          <Input
+                            placeholder="근무종류"
+                            onChange={(e) => setUserStatusInput(e.target.value)}
+                            value={userJobInput}
+                            ref={userJobRef}
+                            onKeyDown={(e) => {
+                              const list = [...userJobList];
+                              if (
+                                e.key === "Enter" &&
+                                userJobRef?.current?.input.value
+                              ) {
+                                const list = [...userJobList];
+                                list.push(userJobRef?.current.input.value);
+                                setUserJobList([...list]);
+                                setUserJobInput("");
+                              }
+                            }}
+                          />
+                          <Button
+                            onClick={() => {
+                              const list = [...userJobList];
+                              list.push(userJobRef?.current.input.value);
+                              setUserJobList([...list]);
+                              setUserJobInput("");
+                            }}
+                          >
+                            추가
+                          </Button>
+                        </div>
+                      }
+                      renderItem={(item, iIdx) => (
+                        <List.Item
+                          actions={[
+                            <Popconfirm
+                              title="삭제"
+                              description="재직상태종류를 삭제하시겠습니까?"
+                              onConfirm={() =>
+                                handleChildrenRemove(
+                                  iIdx,
+                                  userJobList,
+                                  setUserJobList,
+                                  setUserJobInput
+                                )
+                              }
+                              onCancel={() => {
+                                return;
+                              }}
+                              okText="예"
+                              cancelText="아니오"
+                              okType="default"
+                            >
+                              <Button danger style={{ border: 0 }}>
+                                <RiDeleteBin5Line />
+                              </Button>
+                            </Popconfirm>,
+                          ]}
+                        >
+                          {item}
+                        </List.Item>
+                      )}
+                    ></List>
+                  </Form.Item>
+                </Form>
+              </Card>
+            </div>
+            <div
+              className="flex w-full md:w-1/2 lg:w-1/3"
+              style={{ maxWidth: "540px" }}
+            >
+              <Card
+                title="자산설정"
+                size="small"
+                className="w-full "
+                headStyle={{ backgroundColor: "#efeff0", color: "#000000" }}
+              >
+                <Form
+                  labelCol={{
+                    span: 6,
+                  }}
+                  style={{
+                    width: "100%",
+                  }}
+                  labelAlign="right"
+                  size="small"
+                  ref={assetRef}
+                >
+                  <Form.Item name="assetCategory" label="자산종류">
+                    <List
+                      bordered
+                      size="small"
+                      dataSource={assetCategoryList}
+                      header={
+                        <div className="flex w-full justify-start gap-x-2">
+                          <Input
+                            placeholder="자산종류"
+                            onChange={(e) =>
+                              setAssetCategoryInput(e.target.value)
+                            }
+                            value={assetCategoryInput}
+                            ref={assetRef}
+                            onKeyDown={(e) => {
+                              const list = [...assetCategoryList];
+                              if (
+                                e.key === "Enter" &&
+                                assetRef?.current?.input.value
+                              ) {
+                                const list = [...assetCategoryList];
+                                const newValue = {
+                                  key: list.length + 1,
+                                  name: assetRef?.current.input.value,
+                                  depreciationType: "설정안함",
+                                  depreciationPeriod: 0,
+                                };
+                                list.push({ ...newValue });
+                                setAssetCategoryList([...list]);
+                                setAssetCategoryInput("");
+                              }
+                            }}
+                          />
+                          <Button
+                            onClick={() => {
+                              const list = [...assetCategoryList];
+                              const newValue = {
+                                key: list.length + 1,
+                                name: assetRef?.current.input.value,
+                                depreciationType: "설정안함",
+                                depreciationPeriod: 0,
+                              };
+                              list.push({ ...newValue });
+                              setAssetCategoryList([...list]);
+                              setAssetCategoryInput("");
+                            }}
+                          >
+                            추가
+                          </Button>
+                        </div>
+                      }
+                      renderItem={(item, iIdx) => {
+                        return (
                           <List.Item
                             actions={[
                               <Popconfirm
                                 title="삭제"
-                                description="자회사를 삭제하시겠습니까?"
+                                description="자산종류를 삭제하시겠습니까?"
                                 onConfirm={() =>
                                   handleChildrenRemove(
                                     iIdx,
-                                    companyChildrenList,
-                                    setCompanyChildrenList,
-                                    setCompanyChildrenInput
+                                    assetCategoryList,
+                                    setAssetCategoryList,
+                                    setAssetCategoryInput
                                   )
                                 }
                                 onCancel={() => {
@@ -305,366 +651,103 @@ const ServiceSetting = () => {
                               </Popconfirm>,
                             ]}
                           >
-                            {item}
+                            <div className="flex w-full h-auto justify-center items-start flex-wrap flex-col">
+                              <div className="flex w-full">
+                                <Form.Item
+                                  name={`assetDepreciationName_${item.key}`}
+                                  value={item}
+                                  label="자산종류:"
+                                >
+                                  {item.name}
+                                </Form.Item>
+                              </div>
+                              <div className="flex w-full">
+                                <div className="flex w-full">
+                                  <Form.Item
+                                    name={`assetDepreciationType_${item.key}`}
+                                    label="감가방식"
+                                    className="w-full"
+                                  >
+                                    <Select
+                                      allowClear
+                                      defaultValue={
+                                        assetCategoryList[iIdx].depreciationType
+                                      }
+                                      onChange={(value) =>
+                                        handleAssetCategory(
+                                          iIdx,
+                                          "depreciationType",
+                                          value,
+                                          assetCategoryList,
+                                          setAssetCategoryList
+                                        )
+                                      }
+                                      options={[
+                                        { key: "정액법", value: "정액법" },
+                                        { key: "정률법", value: "정률법" },
+                                        { key: "설정안함", value: "설정안함" },
+                                      ]}
+                                      className="w-full"
+                                    />
+                                  </Form.Item>
+                                </div>
+                              </div>
+                              <div className="flex w-full">
+                                <div className="flex w-full">
+                                  <Form.Item
+                                    name={`assetDepreciationPeriod_${item.key}`}
+                                    label="감가기간"
+                                    className="w-full"
+                                  >
+                                    <Select
+                                      allowClear
+                                      onChange={(value) =>
+                                        handleAssetCategory(
+                                          iIdx,
+                                          "depreciationPeriod",
+                                          value,
+                                          assetCategoryList,
+                                          setAssetCategoryList
+                                        )
+                                      }
+                                      defaultValue={
+                                        assetCategoryList[iIdx]
+                                          .depreciationPeriod
+                                      }
+                                      options={[
+                                        { key: "5년", value: 5, label: "5년" },
+                                        {
+                                          key: "10년",
+                                          value: 10,
+                                          label: "10년",
+                                        },
+                                        { key: "6년", value: 6, label: "6년" },
+                                        { key: "7년", value: 7, label: "7년" },
+                                        { key: "8년", value: 8, label: "8년" },
+                                        { key: "9년", value: 9, label: "9년" },
+                                        {
+                                          key: "설정안함",
+                                          value: 0,
+                                          label: "설정안함",
+                                        },
+                                      ]}
+                                    />
+                                  </Form.Item>
+                                </div>
+                              </div>
+                            </div>
                           </List.Item>
-                        )}
-                      />
-                    </Form.Item>
-                  )}
-                </Form.Item>
-              )}
-            </Form>
-          </Card>
+                        );
+                      }}
+                    ></List>
+                  </Form.Item>
+                </Form>
+              </Card>
+            </div>
+          </div>
         </div>
-        <div
-          className="flex w-full md:w-1/2 lg:w-1/3"
-          style={{ maxWidth: "540px" }}
-        >
-          <Card
-            title="구성원설정"
-            size="small"
-            className="w-full "
-            headStyle={{ backgroundColor: "#efeff0", color: "#000000" }}
-          >
-            <Form
-              labelCol={{
-                span: 8,
-              }}
-              style={{
-                width: "100%",
-              }}
-              labelAlign="right"
-              ref={userRef}
-            >
-              <Form.Item name="userStateList" label="재직상태종류">
-                <List
-                  bordered
-                  size="small"
-                  dataSource={userStatusList}
-                  header={
-                    <div className="flex w-full justify-start gap-x-2">
-                      <Input
-                        placeholder="재직종류"
-                        onChange={(e) => setUserStatusInput(e.target.value)}
-                        value={userStatusInput}
-                        ref={userStatusRef}
-                        onKeyDown={(e) => {
-                          const list = [...userStatusList];
-                          if (
-                            e.key === "Enter" &&
-                            userStatusRef?.current?.input.value
-                          ) {
-                            const list = [...userStatusList];
-                            list.push(userStatusRef?.current.input.value);
-                            setUserStatusList([...list]);
-                            setUserStatusInput("");
-                          }
-                        }}
-                      />
-                      <Button
-                        onClick={() => {
-                          const list = [...userStatusList];
-                          list.push(userStatusRef?.current.input.value);
-                          setUserStatusList([...list]);
-                          setUserStatusInput("");
-                        }}
-                      >
-                        추가
-                      </Button>
-                    </div>
-                  }
-                  renderItem={(item, iIdx) => (
-                    <List.Item
-                      actions={[
-                        <Popconfirm
-                          title="삭제"
-                          description="재직상태종류를 삭제하시겠습니까?"
-                          onConfirm={() =>
-                            handleChildrenRemove(
-                              iIdx,
-                              userStatusList,
-                              setUserStatusList,
-                              setUserStatusInput
-                            )
-                          }
-                          onCancel={() => {
-                            return;
-                          }}
-                          okText="예"
-                          cancelText="아니오"
-                          okType="default"
-                        >
-                          <Button danger style={{ border: 0 }}>
-                            <RiDeleteBin5Line />
-                          </Button>
-                        </Popconfirm>,
-                      ]}
-                    >
-                      {item}
-                    </List.Item>
-                  )}
-                ></List>
-              </Form.Item>
-              <Form.Item name="userStateList" label="근무형태종류">
-                <List
-                  bordered
-                  size="small"
-                  dataSource={userJobList}
-                  header={
-                    <div className="flex w-full justify-start gap-x-2">
-                      <Input
-                        placeholder="근무종류"
-                        onChange={(e) => setUserStatusInput(e.target.value)}
-                        value={userJobInput}
-                        ref={userJobRef}
-                        onKeyDown={(e) => {
-                          const list = [...userJobList];
-                          if (
-                            e.key === "Enter" &&
-                            userJobRef?.current?.input.value
-                          ) {
-                            const list = [...userJobList];
-                            list.push(userJobRef?.current.input.value);
-                            setUserJobList([...list]);
-                            setUserJobInput("");
-                          }
-                        }}
-                      />
-                      <Button
-                        onClick={() => {
-                          const list = [...userJobList];
-                          list.push(userJobRef?.current.input.value);
-                          setUserJobList([...list]);
-                          setUserJobInput("");
-                        }}
-                      >
-                        추가
-                      </Button>
-                    </div>
-                  }
-                  renderItem={(item, iIdx) => (
-                    <List.Item
-                      actions={[
-                        <Popconfirm
-                          title="삭제"
-                          description="재직상태종류를 삭제하시겠습니까?"
-                          onConfirm={() =>
-                            handleChildrenRemove(
-                              iIdx,
-                              userJobList,
-                              setUserJobList,
-                              setUserJobInput
-                            )
-                          }
-                          onCancel={() => {
-                            return;
-                          }}
-                          okText="예"
-                          cancelText="아니오"
-                          okType="default"
-                        >
-                          <Button danger style={{ border: 0 }}>
-                            <RiDeleteBin5Line />
-                          </Button>
-                        </Popconfirm>,
-                      ]}
-                    >
-                      {item}
-                    </List.Item>
-                  )}
-                ></List>
-              </Form.Item>
-            </Form>
-          </Card>
-        </div>
-        <div
-          className="flex w-full md:w-1/2 lg:w-1/3"
-          style={{ maxWidth: "540px" }}
-        >
-          <Card
-            title="자산설정"
-            size="small"
-            className="w-full "
-            headStyle={{ backgroundColor: "#efeff0", color: "#000000" }}
-          >
-            <Form
-              labelCol={{
-                span: 6,
-              }}
-              style={{
-                width: "100%",
-              }}
-              labelAlign="right"
-              size="small"
-              ref={assetRef}
-            >
-              <Form.Item name="assetCategory" label="자산종류">
-                <List
-                  bordered
-                  size="small"
-                  dataSource={assetCategoryList}
-                  header={
-                    <div className="flex w-full justify-start gap-x-2">
-                      <Input
-                        placeholder="자산종류"
-                        onChange={(e) => setAssetCategoryInput(e.target.value)}
-                        value={assetCategoryInput}
-                        ref={assetRef}
-                        onKeyDown={(e) => {
-                          const list = [...assetCategoryList];
-                          if (
-                            e.key === "Enter" &&
-                            assetRef?.current?.input.value
-                          ) {
-                            const list = [...assetCategoryList];
-                            const newValue = {
-                              key: list.length + 1,
-                              name: assetRef?.current.input.value,
-                              depreciationType: "설정안함",
-                              depreciationPeriod: 0,
-                            };
-                            list.push({ ...newValue });
-                            setAssetCategoryList([...list]);
-                            setAssetCategoryInput("");
-                          }
-                        }}
-                      />
-                      <Button
-                        onClick={() => {
-                          const list = [...assetCategoryList];
-                          const newValue = {
-                            key: list.length + 1,
-                            name: assetRef?.current.input.value,
-                            depreciationType: "설정안함",
-                            depreciationPeriod: 0,
-                          };
-                          list.push({ ...newValue });
-                          setAssetCategoryList([...list]);
-                          setAssetCategoryInput("");
-                        }}
-                      >
-                        추가
-                      </Button>
-                    </div>
-                  }
-                  renderItem={(item, iIdx) => {
-                    return (
-                      <List.Item
-                        actions={[
-                          <Popconfirm
-                            title="삭제"
-                            description="자산종류를 삭제하시겠습니까?"
-                            onConfirm={() =>
-                              handleChildrenRemove(
-                                iIdx,
-                                assetCategoryList,
-                                setAssetCategoryList,
-                                setAssetCategoryInput
-                              )
-                            }
-                            onCancel={() => {
-                              return;
-                            }}
-                            okText="예"
-                            cancelText="아니오"
-                            okType="default"
-                          >
-                            <Button danger style={{ border: 0 }}>
-                              <RiDeleteBin5Line />
-                            </Button>
-                          </Popconfirm>,
-                        ]}
-                      >
-                        <div className="flex w-full h-auto justify-center items-start flex-wrap flex-col">
-                          <div className="flex w-full">
-                            <Form.Item
-                              name={`assetDepreciationName_${item.key}`}
-                              value={item}
-                              label="자산종류:"
-                            >
-                              {item.name}
-                            </Form.Item>
-                          </div>
-                          <div className="flex w-full">
-                            <div className="flex w-full">
-                              <Form.Item
-                                name={`assetDepreciationType_${item.key}`}
-                                label="감가방식"
-                                className="w-full"
-                              >
-                                <Select
-                                  allowClear
-                                  defaultValue={
-                                    assetCategoryList[iIdx].depreciationType
-                                  }
-                                  onChange={(value) =>
-                                    handleAssetCategory(
-                                      iIdx,
-                                      "depreciationType",
-                                      value,
-                                      assetCategoryList,
-                                      setAssetCategoryList
-                                    )
-                                  }
-                                  options={[
-                                    { key: "정액법", value: "정액법" },
-                                    { key: "정률법", value: "정률법" },
-                                    { key: "설정안함", value: "설정안함" },
-                                  ]}
-                                  className="w-full"
-                                />
-                              </Form.Item>
-                            </div>
-                          </div>
-                          <div className="flex w-full">
-                            <div className="flex w-full">
-                              <Form.Item
-                                name={`assetDepreciationPeriod_${item.key}`}
-                                label="감가기간"
-                                className="w-full"
-                              >
-                                <Select
-                                  allowClear
-                                  onChange={(value) =>
-                                    handleAssetCategory(
-                                      iIdx,
-                                      "depreciationPeriod",
-                                      value,
-                                      assetCategoryList,
-                                      setAssetCategoryList
-                                    )
-                                  }
-                                  defaultValue={
-                                    assetCategoryList[iIdx].depreciationPeriod
-                                  }
-                                  options={[
-                                    { key: "5년", value: 5, label: "5년" },
-                                    { key: "10년", value: 10, label: "10년" },
-                                    { key: "6년", value: 6, label: "6년" },
-                                    { key: "7년", value: 7, label: "7년" },
-                                    { key: "8년", value: 8, label: "8년" },
-                                    { key: "9년", value: 9, label: "9년" },
-                                    {
-                                      key: "설정안함",
-                                      value: 0,
-                                      label: "설정안함",
-                                    },
-                                  ]}
-                                />
-                              </Form.Item>
-                            </div>
-                          </div>
-                        </div>
-                      </List.Item>
-                    );
-                  }}
-                ></List>
-              </Form.Item>
-            </Form>
-          </Card>
-        </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 };
 

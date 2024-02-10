@@ -22,7 +22,8 @@ const Main = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [memberInfo, setMemberInfo] = useState({});
   const [memberSetting, setMemberSetting] = useState({});
-  const { loginInfo, setLoginInfo } = useContext(CurrentLoginContext);
+  const { loginInfo, setLoginInfo, memberSettings, setMemberSettings } =
+    useContext(CurrentLoginContext);
   const { currentUser, logOut } = useFirebaseAuth();
   const membersQuery = useFirestoreQuery();
   const memberSettingQuery = useFirestoreQuery();
@@ -95,9 +96,10 @@ const Main = ({ children }) => {
         fetchMembersQuery(currentUser.uid),
         fetchMemberSettingQuery(currentUser.uid),
         clearTimeout(timer),
-        setIsLoading(false),
       ];
-      Promise.all(promises);
+      Promise.all(promises).then(() => {
+        setIsLoading(false);
+      });
     }
 
     // 컴포넌트 언마운트 시 타이머 제거
@@ -106,6 +108,9 @@ const Main = ({ children }) => {
 
   useEffect(() => {
     console.log(memberInfo, memberSetting);
+    if (memberSetting) {
+      setMemberSettings(() => ({ ...memberSetting }));
+    }
   }, [memberInfo, memberSetting]);
 
   return (
