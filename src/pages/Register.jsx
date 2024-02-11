@@ -210,7 +210,7 @@ const Register = () => {
                     userID: data.userID,
                     userStatus: [...initUserStatus],
                     userJobs: [...initUserJob],
-                    categories: [...initCategory],
+                    assetCategories: [...initCategory],
                     firstCreatedAt: Timestamp.fromDate(new Date()),
                     memberShipType: "demo",
                     demoEndedAt,

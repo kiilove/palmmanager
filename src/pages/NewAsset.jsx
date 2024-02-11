@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { ContentTitle } from "../commonstyles/Title";
 import {
   Button,
   Card,
   DatePicker,
+  Divider,
   Form,
   Input,
   InputNumber,
@@ -11,21 +12,35 @@ import {
   Space,
   notification,
 } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import "dayjs/locale/ko";
 import locale from "antd/es/date-picker/locale/ko_KR";
 import dayjs from "dayjs";
 import { generateUUID } from "../functions";
 import { Timestamp } from "firebase/firestore";
 import { useFirestoreAddData } from "../hooks/useFirestore";
+import { CurrentLoginContext } from "../context/CurrentLogin";
 
 const NewAsset = () => {
   const formRef = useRef();
   const assetAdd = useFirestoreAddData();
   const [assetInputs, setAssetInputs] = useState([]);
   const [assetCodes, setAssetCodes] = useState([]);
+  const [assetCategoriesList, setAssetCategoriesList] = useState([]);
+  const [currentCategory, setCurrentCategory] = useState("");
+  const [currentCategoryInfo, setCurrentCategoryInfo] = useState({});
+  const [currentProductLine, setCurrentProductLine] = useState("");
+  const [productLineList, setProductLineList] = useState([]);
   const [assetCount, setAssetCount] = useState(0);
   const [assetVendor, setAssetVendor] = useState("");
   const [assetModel, setAssetModel] = useState("");
+  const [categoryInput, setCategoryInput] = useState("");
+  const [productLineInput, setProductLineInput] = useState("");
+  const addCategoryRef = useRef();
+  const addProductLineRef = useRef();
+
+  const { loginInfo, memberSettings } = useContext(CurrentLoginContext);
+
   const [api, contextHolder] = notification.useNotification();
   const openNotification = (
     apiType,
@@ -67,26 +82,28 @@ const NewAsset = () => {
     newValue.userInfo = "미배정";
     delete newValue.assetCount;
 
-    if (assetCodes.length > 0) {
-      assetCodes.map(async (code, cIdx) => {
-        const codeWithValue = { assetCode: code, ...newValue };
-        try {
-          await assetAdd.addData("assets", { ...codeWithValue }, (data) => {
-            openNotification(
-              "success",
-              "추가 성공",
-              `${data?.assetName}을 추가했습니다.`,
-              "topRight",
-              3,
-              5
-            );
-          });
-        } catch (error) {
-          console.log(error);
-        }
-      });
-    }
-    initFormValue(formRef);
+    console.log(newValue);
+
+    // if (assetCodes.length > 0) {
+    //   assetCodes.map(async (code, cIdx) => {
+    //     const codeWithValue = { assetCode: code, ...newValue };
+    //     try {
+    //       await assetAdd.addData("assets", { ...codeWithValue }, (data) => {
+    //         openNotification(
+    //           "success",
+    //           "추가 성공",
+    //           `${data?.assetName}을 추가했습니다.`,
+    //           "topRight",
+    //           3,
+    //           5
+    //         );
+    //       });
+    //     } catch (error) {
+    //       console.log(error);
+    //     }
+    //   });
+    // }
+    // initFormValue(formRef);
   };
 
   const initFormValue = (ref) => {
@@ -108,6 +125,15 @@ const NewAsset = () => {
         ...ref?.current.getFieldsValue(),
         assetName,
       });
+    }
+  };
+
+  //직접추가 부분 구현해야함
+  const handleAddCustom = (type, value, original) => {
+    const newMemberSettings = { ...original };
+    switch (type) {
+      case "category":
+        break;
     }
   };
 
@@ -174,6 +200,31 @@ const NewAsset = () => {
     initFormValue(formRef);
   }, []);
 
+  useEffect(() => {
+    if (memberSettings?.assetCategories) {
+      setAssetCategoriesList(() => [...memberSettings.assetCategories]);
+    }
+  }, [memberSettings]);
+
+  useEffect(() => {
+    if (memberSettings?.assetCategories) {
+      const filtered = memberSettings.assetCategories.find(
+        (f) => f.name === currentCategory
+      );
+      console.log(filtered);
+      setCurrentCategoryInfo(filtered);
+      if (filtered?.productLine?.length > 0) {
+        setProductLineList(() => [...filtered.productLine]);
+      } else {
+        setProductLineList([]);
+      }
+    }
+  }, [currentCategory]);
+
+  useEffect(() => {
+    console.log(productLineList);
+  }, [productLineList]);
+
   return (
     <div
       className="flex w-full h-full flex-col rounded-lg"
@@ -203,8 +254,61 @@ const NewAsset = () => {
               onFinish={handleFinish}
               autoComplete="off"
             >
-              <Form.Item name="assetCategory" label="종류">
-                <Input style={{ width: "90%" }} />
+              <Form.Item label="분류">
+                <div className="flex w-full gap-2">
+                  <Form.Item name="assetCategory" label="분류" noStyle>
+                    {/* <Input style={{ width: "90%" }} /> */}
+                    <Select
+                      style={{ width: 160 }}
+                      dropdownRender={(menu) => (
+                        <>
+                          {menu}
+                          <Divider
+                            style={{
+                              margin: "8px 0",
+                            }}
+                          />
+                          <Space
+                            style={{
+                              padding: "0 8px 4px",
+                            }}
+                          >
+                            <Input
+                              placeholder="대분류명"
+                              ref={addCategoryRef}
+                              value={categoryInput}
+                              onChange={(value) =>
+                                setCategoryInput(() => value)
+                              }
+                              // onKeyDown={(e) => e.stopPropagation()}
+                            />
+                            <Button type="text" icon={<PlusOutlined />} />
+                          </Space>
+                        </>
+                      )}
+                      onChange={(value) => setCurrentCategory(() => value)}
+                      value={currentCategory}
+                      options={assetCategoriesList.map((category, cIdx) => ({
+                        label: category.name,
+                        value: category.name,
+                      }))}
+                    />
+                    {currentCategory !== "" && productLineList.length > 0 && (
+                      <Form.Item noStyle name="assetProductLine">
+                        <Select
+                          style={{ width: 160 }}
+                          dropdownRender={(menu) => <>{menu}</>}
+                          onChange={(value) => setCurrentProductLine(value)}
+                          value={currentProductLine}
+                          options={productLineList.map((product, pIdx) => ({
+                            label: product,
+                            value: product,
+                          }))}
+                        />
+                      </Form.Item>
+                    )}
+                  </Form.Item>
+                </div>
               </Form.Item>
               <Form.Item name="assetVendor" label="제조사">
                 <Input

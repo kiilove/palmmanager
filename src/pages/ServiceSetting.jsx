@@ -18,12 +18,14 @@ import {
   Switch,
   Table,
   Upload,
+  notification,
 } from "antd";
 import useImageUpload from "../hooks/useFireStorage";
 import { generateFileName, generateUUID } from "../functions";
 import "./AutoComplete.css";
 import { CurrentLoginContext } from "../context/CurrentLogin";
 import useFirebaseAuth from "../hooks/useFireAuth";
+import { useFirestoreUpdateData } from "../hooks/useFirestore";
 
 const initUserStatus = ["재직", "파견", "휴직", "퇴사"];
 const initUserJob = ["정직원", "계약직", "임시직", "프리랜서", "외부직원"];
@@ -56,14 +58,12 @@ const ServiceSetting = () => {
   const [companyLogoFile, setCompanyLogoFile] = useState([]);
   const companyLogoUpload = useImageUpload();
 
-  const [userStatusList, setUserStatusList] = useState([...initUserStatus]);
+  const [userStatusList, setUserStatusList] = useState([]);
   const [userStatusInput, setUserStatusInput] = useState();
-  const [userJobList, setUserJobList] = useState([...initUserJob]);
+  const [userJobList, setUserJobList] = useState([]);
   const [userJobInput, setUserJobInput] = useState();
 
-  const [assetCategoryList, setAssetCategoryList] = useState([
-    ...initCategory2,
-  ]);
+  const [assetCategoryList, setAssetCategoryList] = useState([]);
   const [assetCategoryInput, setAssetCategoryInput] = useState();
 
   const companyChildrenRef = useRef();
@@ -74,10 +74,29 @@ const ServiceSetting = () => {
   const assetRef = useRef();
   const [form] = Form.useForm();
 
-  const { loginInfo, memberSettings, setMemberSettins } =
+  const { loginInfo, memberSettings, setMemberSettings } =
     useContext(CurrentLoginContext);
 
   const { logOut } = useFirebaseAuth;
+  const settingsUpdate = useFirestoreUpdateData();
+
+  const [api, contextHolder] = notification.useNotification();
+  const openNotification = (
+    apiType,
+    title,
+    message,
+    placement,
+    duration,
+    maxCount
+  ) => {
+    api[apiType]({
+      message: title,
+      description: message,
+      placement,
+      duration,
+      maxCount,
+    });
+  };
 
   const getBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -157,18 +176,40 @@ const ServiceSetting = () => {
     setList(() => [...newList]);
   };
 
-  const handleSettingInfo = (refs = []) => {
+  const handleUpdateSettings = async (id, value) => {
+    try {
+      await settingsUpdate.updateData("memberSetting", id, value, (data) => {
+        setMemberSettings(() => ({ ...data }));
+        setIsLoading(false);
+        openNotification(
+          "success",
+          "업데이트 성공",
+          "정상적으로 업데이트 되었습니다.",
+          "top",
+          3
+        );
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleSettingInfo = (data) => {
+    setIsLoading(true);
     const settings = {
+      ...data,
       ...companyRef?.current.getFieldsValue(),
-      companyChildrenList: [...companyChildrenList],
+      companyChildren: [...companyChildrenList],
       companyLogo: [...companyLogoFile],
-      userStatusList: [...userStatusList],
-      userJobList: [...userJobList],
-      assetCategoryList: [...assetCategoryList],
+      userStatus: [...userStatusList],
+      userJobLs: [...userJobList],
+      assetCategories: [...assetCategoryList],
       // ownUser: loginInfo.uid,
     };
-
+    delete settings.id;
+    delete settings.companyChildrenName;
     console.log(settings);
+    handleUpdateSettings(data.id, settings);
   };
 
   useEffect(() => {
@@ -184,11 +225,15 @@ const ServiceSetting = () => {
       const promises = [
         setCompanyLogoFile(() => [...memberSettings.companyLogo]),
         setCompanyChildrenList(() => [...memberSettings.companyChildren]),
+        setIsCompanyChildren(memberSettings.isCompanyChildren),
         form?.setFieldValue("companyName", memberSettings.companyName),
         form?.setFieldValue(
           "isCompanyChildren",
           memberSettings.isCompanyChildren
         ),
+        setUserJobList(() => [...memberSettings.userJobs]),
+        setUserStatusList(() => [...memberSettings.userStatus]),
+        setAssetCategoryList(() => [...memberSettings.assetCategories]),
         clearTimeout(timer),
       ];
       Promise.all(promises).then(() => {
@@ -240,9 +285,7 @@ const ServiceSetting = () => {
             <ContentTitle title="환경설정" />
           </div>
           <div className="flex w-full px-5">
-            <Button
-              onClick={() => handleSettingInfo([companyRef, userRef, assetRef])}
-            >
+            <Button onClick={() => handleSettingInfo(memberSettings)}>
               저장
             </Button>
           </div>
@@ -292,14 +335,14 @@ const ServiceSetting = () => {
                     initialValue={memberSettings.isCompanyChildren}
                   >
                     <Switch
-                      checked={memberSettings.isCompanyChildren}
-                      onChange={setIsCompanyChildren}
+                      checked={isCompanyChildren}
+                      onChange={(value) => setIsCompanyChildren(value)}
                     />
                   </Form.Item>
                   {isCompanyChildren && (
                     <Form.Item label="자회사관리">
                       {companyChildrenEditMode ? (
-                        <Form.Item noStyle name="companyChildredName">
+                        <Form.Item noStyle name="companyChildrenName">
                           <Space.Compact>
                             <Input placeholder="회사명" />
                             <Button>m</Button>
@@ -307,7 +350,7 @@ const ServiceSetting = () => {
                           </Space.Compact>
                         </Form.Item>
                       ) : (
-                        <Form.Item noStyle name="companyChildredName">
+                        <Form.Item noStyle name="companyChildrenName">
                           <List
                             size="small"
                             bordered
@@ -656,7 +699,7 @@ const ServiceSetting = () => {
                                 <Form.Item
                                   name={`assetDepreciationName_${item.key}`}
                                   value={item}
-                                  label="자산종류:"
+                                  label="자산분류:"
                                 >
                                   {item.name}
                                 </Form.Item>
@@ -747,6 +790,7 @@ const ServiceSetting = () => {
           </div>
         </div>
       )}
+      {contextHolder}
     </>
   );
 };
