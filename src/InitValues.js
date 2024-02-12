@@ -57,3 +57,18 @@ export const initCategory = [
   },
   { key: 5, name: "기타", depreciationType: "설정안함", depreciationPeriod: 0 },
 ];
+
+export const initDescription = [
+  {
+    key: 1,
+    productLine: "데스크탑",
+    descritpionItem: [
+      { keyName: "프로세서", valueType: "autoComplete" },
+      { keyName: "메모리", valueType: "autoComplete" },
+      { keyName: "메인보드", valueType: "autoComplete" },
+      { keyName: "운영체제", valueType: "autoComplete" },
+      { keyName: "크기(W×D×H)", valueType: "textSize" },
+      { keyName: "비고", valueType: "textArea" },
+    ],
+  },
+];
